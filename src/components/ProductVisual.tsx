@@ -1,14 +1,12 @@
 import React from 'react';
 import { FLAVOUR_MAP } from '../data/flavours';
-import { PRODUCT_PHOTO_MAP } from '../data/productImages';
 import type { FlavourId } from '../types';
 
 interface ProductVisualProps {
-  visualType: 'sprite' | 'duo-sprite' | 'photo';
-  flavourIds: FlavourId[];
-  imageKey?: 'variety-pack' | 'tasting-crate' | 'craft-press' | 'cooler-tote';
+  heroSpecKey: FlavourId | null;
+  imageUrl?: string;
   alt: string;
-  bgTint: string;
+  bgTint?: string;
   compact?: boolean;
 }
 
@@ -37,21 +35,20 @@ function BottleSprite({ flavourId, className = '' }: { flavourId: FlavourId; cla
 }
 
 export const ProductVisual: React.FC<ProductVisualProps> = ({
-  visualType,
-  flavourIds,
-  imageKey,
+  heroSpecKey,
+  imageUrl,
   alt,
-  bgTint,
+  bgTint = '#FAF9F7',
   compact = false,
 }) => {
-  if (visualType === 'photo' && imageKey && PRODUCT_PHOTO_MAP[imageKey]) {
+  if (imageUrl && imageUrl.trim()) {
     return (
       <div
         className="relative w-full h-full overflow-hidden flex items-center justify-center"
-        style={{ backgroundColor: bgTint }}
+        style={{ backgroundColor: bgTint || '#FAF9F7' }}
       >
         <img
-          src={PRODUCT_PHOTO_MAP[imageKey]}
+          src={imageUrl}
           alt={alt}
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
@@ -60,42 +57,30 @@ export const ProductVisual: React.FC<ProductVisualProps> = ({
     );
   }
 
-  if (visualType === 'duo-sprite' && flavourIds.length >= 2) {
+  if (heroSpecKey && FLAVOUR_MAP[heroSpecKey]) {
     return (
       <div
         className="relative w-full h-full overflow-hidden flex items-center justify-center"
-        style={{ backgroundColor: bgTint }}
+        style={{ backgroundColor: bgTint || FLAVOUR_MAP[heroSpecKey].bg }}
       >
-        <div
-          className={`flex items-end justify-center ${
-            compact ? 'h-[78%] gap-0.5' : 'h-[78%] -space-x-4'
-          }`}
-        >
-          <BottleSprite
-            flavourId={flavourIds[0]}
-            className="h-full drop-shadow-[0_12px_18px_rgba(60,40,80,0.14)] -rotate-3 transition-transform duration-300 group-hover:-translate-y-1"
-          />
-          <BottleSprite
-            flavourId={flavourIds[1]}
-            className="h-full drop-shadow-[0_12px_18px_rgba(60,40,80,0.14)] rotate-3 transition-transform duration-300 group-hover:-translate-y-1"
-          />
-        </div>
+        <BottleSprite
+          flavourId={heroSpecKey}
+          className={`${
+            compact ? 'h-[82%]' : 'h-[80%]'
+          } drop-shadow-[0_14px_20px_rgba(60,40,80,0.15)] transition-transform duration-300 group-hover:-translate-y-1`}
+        />
       </div>
     );
   }
 
-  const primaryFlavour = flavourIds[0] ?? 'berry';
   return (
     <div
-      className="relative w-full h-full overflow-hidden flex items-center justify-center"
-      style={{ backgroundColor: bgTint }}
+      className="relative w-full h-full overflow-hidden flex items-center justify-center p-4 text-center"
+      style={{ backgroundColor: bgTint || '#F4F4F5' }}
     >
-      <BottleSprite
-        flavourId={primaryFlavour}
-        className={`${
-          compact ? 'h-[82%]' : 'h-[80%]'
-        } drop-shadow-[0_14px_20px_rgba(60,40,80,0.15)] transition-transform duration-300 group-hover:-translate-y-1`}
-      />
+      <span className="text-xs font-medium uppercase tracking-widest text-zinc-500">
+        {alt || 'Blendy Product'}
+      </span>
     </div>
   );
 };

@@ -1,310 +1,224 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import { useStore } from '../context/StoreContext';
+import { formatKsh } from '../lib/kenya';
+import { trackStoreEvent } from '../services/analytics';
 import { ProductVisual } from './ProductVisual';
-import type { CartItem, Product } from '../types';
 
-interface CartDrawerProps {
-  open: boolean;
-  items: CartItem[];
-  products: Product[];
-  promoCode: string | null;
-  promoDiscount: number;
-  promoMessage: string;
-  freeShippingThreshold: number;
-  onClose: () => void;
-  onUpdateQty: (productId: string, variantId: string, qty: number) => void;
-  onRemoveItem: (productId: string, variantId: string) => void;
-  onApplyPromo: (code: string, subtotal: number) => Promise<void>;
-  onClearPromo: () => void;
-  onProceedToCheckout: () => void;
-}
-
-export const CartDrawer: React.FC<CartDrawerProps> = ({
-  open,
-  items,
-  products,
-  promoCode,
-  promoDiscount,
-  promoMessage,
-  freeShippingThreshold,
-  onClose,
-  onUpdateQty,
-  onRemoveItem,
-  onApplyPromo,
-  onClearPromo,
-  onProceedToCheckout,
-}) => {
-  const [codeInput, setCodeInput] = useState('');
-  const [promoError, setPromoError] = useState<string | null>(null);
-  const [applyingPromo, setApplyingPromo] = useState(false);
+export const CartDrawer: React.FC = () => {
+  const navigate = useNavigate();
+  const {
+    cartDrawerOpen,
+    setCartDrawerOpen,
+    cartItems,
+    cartQuote,
+    cartSyncing,
+    updateCartQty,
+    removeFromCart,
+    products,
+  } = useStore();
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  const resolvedRows = items
-    .map((item) => {
-      const product = products.find((p) => p.id === item.productId);
-      if (!product) return null;
-      const variant = product.variants.find((v) => v.id === item.variantId) ?? product.variants[0];
-      return {
-        item,
-        product,
-        variant,
-        lineTotal: Math.round(variant.price * item.quantity * 100) / 100,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
-
-  const subtotal =
-    Math.round(resolvedRows.reduce((sum, r) => sum + r.lineTotal, 0) * 100) / 100;
-  const effectiveDiscount = Math.min(subtotal, promoDiscount);
-  const afterDiscount = Math.max(0, Math.round((subtotal - effectiveDiscount) * 100) / 100);
-  const qualifiesFreeShipping =
-    afterDiscount >= freeShippingThreshold || promoCode === 'FREESHIP';
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - afterDiscount);
-  const shippingFee = resolvedRows.length === 0 ? 0 : qualifiesFreeShipping ? 0 : 5.9;
-  const total = Math.round((afterDiscount + shippingFee) * 100) / 100;
-
-  const handlePromoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPromoError(null);
-    if (!codeInput.trim()) return;
-    setApplyingPromo(true);
-    try {
-      await onApplyPromo(codeInput.trim(), subtotal);
-      setCodeInput('');
-    } catch (err) {
-      setPromoError(err instanceof Error ? err.message : 'Invalid promo code');
-    } finally {
-      setApplyingPromo(false);
+    if (cartDrawerOpen) {
+      trackStoreEvent('view_cart', {
+        value: cartQuote ? cartQuote.subtotalCents / 100 : 0,
+      });
     }
-  };
+  }, [cartDrawerOpen, cartQuote]);
+
+  useEffect(() => {
+    if (!cartDrawerOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCartDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [cartDrawerOpen, setCartDrawerOpen]);
+
+  if (!cartDrawerOpen) return null;
+
+  const lines = cartQuote?.lines ?? [];
+  const hasItems = cartItems.length > 0;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex justify-end bg-zinc-950/50 backdrop-blur-xs"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Shopping bag"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div
+        className="fixed inset-0 bg-zinc-950/50 backdrop-blur-[2px]"
+        onClick={() => setCartDrawerOpen(false)}
+        aria-hidden="true"
+      />
       <aside
-        className="w-full max-w-md h-full bg-[#FAF9F7] shadow-2xl flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping Bag"
+        className="relative z-10 w-full max-w-md bg-[#FAF9F7] h-full flex flex-col shadow-2xl border-l border-zinc-200"
       >
-        {/* Header */}
-        <div className="px-6 py-5 border-b border-zinc-900/10 flex items-center justify-between bg-white">
+        <div className="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-white">
           <div className="flex items-center gap-2.5">
-            <ShoppingBag className="w-5 h-5 text-zinc-900" aria-hidden="true" />
-            <h2 className="text-lg font-bold text-zinc-950 tabular-nums">
-              Your Bag ({resolvedRows.reduce((s, r) => s + r.item.quantity, 0)})
-            </h2>
+            <ShoppingBag className="w-5 h-5 text-zinc-900" />
+            <h2 className="text-lg font-semibold text-zinc-900">Your Shopping Bag</h2>
           </div>
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Close bag"
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 cursor-pointer"
+            onClick={() => setCartDrawerOpen(false)}
+            aria-label="Close shopping bag"
+            className="w-10 h-10 flex items-center justify-center rounded-lg text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Free Shipping Bar */}
-        {resolvedRows.length > 0 && (
-          <div className="px-6 py-3 bg-white border-b border-zinc-900/8">
-            <div className="text-xs font-medium text-zinc-700 tabular-nums">
-              {qualifiesFreeShipping
-                ? 'Unlocked: Free chilled insulated delivery'
-                : `Add $${remainingForFreeShipping.toFixed(2)} more for free chilled delivery`}
-            </div>
-            <div className="mt-2 h-1.5 w-full rounded-full bg-zinc-200 overflow-hidden">
-              <div
-                className="h-full bg-zinc-900 transition-all duration-300"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    qualifiesFreeShipping ? 100 : (afterDiscount / freeShippingThreshold) * 100
-                  )}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Items */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-          {resolvedRows.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center py-12">
-              <div className="w-14 h-14 rounded-2xl bg-zinc-900/5 flex items-center justify-center text-zinc-400">
-                <ShoppingBag className="w-7 h-7" />
-              </div>
-              <p className="mt-4 text-base font-semibold text-zinc-900">Your bag is empty</p>
-              <p className="mt-1 text-sm text-zinc-500 max-w-xs">
-                Explore Berry, Kiwi, Banana, and Strawberry smoothies or start with our Signature 4-Pack.
+          {!hasItems && (
+            <div className="py-16 text-center space-y-4">
+              <p className="text-base font-medium text-zinc-900">Your shopping bag is empty</p>
+              <p className="text-sm text-zinc-600">
+                Browse published smoothie flavours and select a bottle or pack size to begin.
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  onClose();
-                  document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+                  setCartDrawerOpen(false);
+                  navigate('/shop');
                 }}
-                className="mt-5 px-5 py-2.5 text-sm font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 cursor-pointer"
+                className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 cursor-pointer"
               >
-                Browse Smoothies
+                Browse Shop
               </button>
             </div>
-          ) : (
-            resolvedRows.map(({ item, product, variant, lineTotal }) => (
-              <div
-                key={`${product.id}-${variant.id}`}
-                className="p-3.5 rounded-xl bg-white border border-zinc-900/10 flex gap-3.5"
-              >
-                <div className="w-20 h-20 rounded-lg overflow-hidden shrink-0">
-                  <ProductVisual
-                    visualType={product.visualType}
-                    flavourIds={product.flavourIds}
-                    imageKey={product.imageKey}
-                    alt={product.name}
-                    bgTint={product.bgTint}
-                    compact
-                  />
-                </div>
+          )}
 
-                <div className="flex-1 min-w-0 flex flex-col justify-between">
+          {cartQuote && cartQuote.issues.length > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 space-y-1">
+              {cartQuote.issues.map((issue, idx) => (
+                <p key={idx}>{issue}</p>
+              ))}
+            </div>
+          )}
+
+          {lines.map((line) => (
+            <div
+              key={line.variantId}
+              className="flex gap-4 bg-white p-3.5 rounded-xl border border-zinc-200/80"
+            >
+              <div className="w-20 h-24 rounded-lg overflow-hidden shrink-0">
+                <ProductVisual
+                  heroSpecKey={line.heroSpecKey}
+                  imageUrl={line.imageUrl}
+                  alt={line.productName}
+                  bgTint={line.bgTint}
+                  compact
+                />
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-zinc-950 truncate">
-                        {product.name}
-                      </h3>
-                      <p className="text-xs text-zinc-500">
-                        {variant.label} · ${variant.price.toFixed(2)}
-                      </p>
-                    </div>
+                    <h3 className="text-sm font-semibold text-zinc-900 truncate">
+                      {line.productName}
+                    </h3>
                     <button
                       type="button"
-                      onClick={() => onRemoveItem(product.id, variant.id)}
-                      aria-label={`Remove ${product.name}`}
-                      className="text-zinc-400 hover:text-red-600 p-1 cursor-pointer"
+                      onClick={() => removeFromCart(line.variantId)}
+                      aria-label={`Remove ${line.productName}`}
+                      className="text-zinc-400 hover:text-red-600 p-1 -mr-1 cursor-pointer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">{line.variantLabel}</p>
+                  <p className="text-sm font-medium text-zinc-900 tabular-nums mt-1">
+                    {formatKsh(line.unitPriceCents)}
+                  </p>
+                </div>
 
-                  <div className="mt-2 flex items-center justify-between">
-                    <div className="flex items-center border border-zinc-900/12 rounded-md h-8">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onUpdateQty(product.id, variant.id, item.quantity - 1)
-                        }
-                        aria-label="Decrease quantity"
-                        className="w-8 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-950 cursor-pointer"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="w-7 text-center text-xs font-semibold tabular-nums">
-                        {item.quantity}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onUpdateQty(product.id, variant.id, item.quantity + 1)
-                        }
-                        aria-label="Increase quantity"
-                        className="w-8 h-full flex items-center justify-center text-zinc-600 hover:text-zinc-950 cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <span className="text-sm font-semibold text-zinc-950 tabular-nums">
-                      ${lineTotal.toFixed(2)}
+                <div className="flex items-center justify-between mt-3">
+                  <div className="inline-flex items-center border border-zinc-300 rounded-lg bg-white">
+                    <button
+                      type="button"
+                      onClick={() => updateCartQty(line.variantId, line.quantity - 1)}
+                      aria-label="Decrease quantity"
+                      className="w-8 h-8 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 cursor-pointer"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-8 text-center text-xs font-semibold tabular-nums">
+                      {line.quantity}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateCartQty(
+                          line.variantId,
+                          Math.min(line.availableQty, line.quantity + 1)
+                        )
+                      }
+                      aria-label="Increase quantity"
+                      disabled={line.quantity >= line.availableQty}
+                      className="w-8 h-8 flex items-center justify-center text-zinc-700 hover:bg-zinc-100 disabled:opacity-40 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                  <p className="text-sm font-semibold text-zinc-900 tabular-nums">
+                    {formatKsh(line.lineTotalCents)}
+                  </p>
                 </div>
               </div>
-            ))
+            </div>
+          ))}
+
+          {/* Fallback display while quote loads or if an item became draft/unavailable */}
+          {hasItems && lines.length === 0 && !cartSyncing && (
+            <div className="space-y-2">
+              {cartItems.map((item) => {
+                const p = products.find((prod) => prod.id === item.productId);
+                return (
+                  <div
+                    key={item.variantId}
+                    className="flex items-center justify-between bg-white p-3 rounded-lg border border-zinc-200 text-sm"
+                  >
+                    <span className="text-zinc-700">
+                      {p?.name || `Item #${item.productId}`} (×{item.quantity})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeFromCart(item.variantId)}
+                      className="text-xs text-red-600 font-medium cursor-pointer"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
 
-        {/* Footer Totals & Promo */}
-        {resolvedRows.length > 0 && (
-          <div className="px-6 py-5 bg-white border-t border-zinc-900/10 space-y-4">
-            {/* Promo Code */}
-            <div>
-              {promoCode ? (
-                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
-                  <span className="font-medium">{promoMessage || `Code ${promoCode} active`}</span>
-                  <button
-                    type="button"
-                    onClick={onClearPromo}
-                    className="font-semibold underline ml-2 cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handlePromoSubmit} className="space-y-1.5">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={codeInput}
-                      onChange={(e) => setCodeInput(e.target.value)}
-                      placeholder="Promo code (e.g. BLENDY10)"
-                      aria-label="Promo code"
-                      className="flex-1 h-9 px-3 text-xs border border-zinc-900/15 rounded-lg focus:outline-none focus:border-zinc-900 uppercase"
-                    />
-                    <button
-                      type="submit"
-                      disabled={applyingPromo}
-                      className="px-4 h-9 text-xs font-semibold bg-zinc-100 text-zinc-900 rounded-lg hover:bg-zinc-200 cursor-pointer"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  {promoError && <p className="text-xs text-red-600">{promoError}</p>}
-                  <p className="text-[11px] text-zinc-400">
-                    Test codes: BLENDY10 (10% off), FRESH5 ($5 off $25+), FREESHIP
-                  </p>
-                </form>
-              )}
-            </div>
-
-            {/* Summary */}
-            <div className="space-y-1.5 text-sm tabular-nums">
-              <div className="flex justify-between text-zinc-600">
-                <span>Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+        {hasItems && (
+          <div className="p-6 bg-white border-t border-zinc-200 space-y-4">
+            <div className="space-y-1.5 text-sm">
+              <div className="flex justify-between text-zinc-700">
+                <span>Items Subtotal</span>
+                <span className="font-semibold text-zinc-950 tabular-nums">
+                  {cartSyncing
+                    ? 'Calculating...'
+                    : formatKsh(cartQuote?.subtotalCents ?? 0)}
+                </span>
               </div>
-              {effectiveDiscount > 0 && (
-                <div className="flex justify-between text-emerald-700">
-                  <span>Discount ({promoCode})</span>
-                  <span>−${effectiveDiscount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-zinc-600">
-                <span>Chilled Delivery</span>
-                <span>{shippingFee === 0 ? 'Free' : `$${shippingFee.toFixed(2)}`}</span>
-              </div>
-              <div className="pt-2 border-t border-zinc-900/10 flex justify-between text-base font-bold text-zinc-950">
-                <span>Estimated Total</span>
-                <span>${total.toFixed(2)}</span>
-              </div>
+              <p className="text-xs text-zinc-500">
+                Delivery fees or pickup collection selection are calculated at checkout.
+              </p>
             </div>
 
             <button
               type="button"
-              onClick={onProceedToCheckout}
-              className="w-full h-12 text-sm font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 transition-colors cursor-pointer"
+              disabled={!cartQuote || cartQuote.lines.length === 0 || cartQuote.issues.length > 0}
+              onClick={() => {
+                setCartDrawerOpen(false);
+                navigate('/checkout');
+              }}
+              className="w-full py-3.5 px-5 rounded-xl bg-zinc-900 text-white text-sm font-semibold hover:bg-zinc-800 transition-colors disabled:opacity-50 cursor-pointer"
             >
               Proceed to Checkout
             </button>

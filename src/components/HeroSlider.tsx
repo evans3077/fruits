@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { FLAVOURS, SHADOWS } from '../data/flavours';
-import type { AuthUser, FlavourFilter } from '../types';
+import type { FlavourId } from '../types';
 
 const COVER_TABLE: [number, number][] = [
   [0, 0],
@@ -38,15 +38,15 @@ const INTERACTION_PAUSE_MS = 6000;
 
 interface HeroSliderProps {
   cartCount: number;
-  user: AuthUser | null;
+  userName: string | null;
   onOpenCart: () => void;
   onOpenAccount: () => void;
-  onShopFlavour: (flavour: FlavourFilter) => void;
+  onShopFlavour: (flavourId: FlavourId) => void;
 }
 
 export const HeroSlider: React.FC<HeroSliderProps> = ({
   cartCount,
-  user,
+  userName,
   onOpenCart,
   onOpenAccount,
   onShopFlavour,
@@ -558,12 +558,12 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
       underlineEl.style.width = `${activeTab.offsetWidth}px`;
       underlineEl.style.transform = `translateX(${activeTab.offsetLeft}px)`;
     }
-  }, [cartCount, user]);
+  }, [cartCount, userName]);
 
   const handleShopNowClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    const activeFlavour = FLAVOURS[activeFlavourIdxRef.current]?.word as FlavourFilter | undefined;
-    onShopFlavour(activeFlavour ?? 'All');
+    const activeFlavour = FLAVOURS[activeFlavourIdxRef.current]?.id ?? 'berry';
+    onShopFlavour(activeFlavour);
   };
 
   return (
@@ -573,10 +573,10 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
       <div className="blendy-hero-ui">
         <header className="blendy-header">
           <a
-            href="#catalog"
+            href="#home-catalogue"
             onClick={(e) => {
               e.preventDefault();
-              document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+              document.getElementById('home-catalogue')?.scrollIntoView({ behavior: 'smooth' });
             }}
             className="blendy-logo blendy-reveal-item"
             style={{ '--reveal-delay': '250ms' } as React.CSSProperties}
@@ -616,7 +616,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
               |
             </span>
             <button type="button" onClick={onOpenAccount} aria-label="Open account and registration">
-              {user ? user.name.split(' ')[0] : 'Register'}
+              {userName ? userName.split(' ')[0] : 'Account'}
             </button>
           </div>
         </header>
