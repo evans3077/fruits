@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blendy — Real fruit smoothies</title>
+  <meta name="description" content="Single-screen landing hero and flavour slider for Blendy real fruit smoothies featuring Berry, Kiwi, Banana, and Strawberry.">
+  <meta property="og:title" content="Blendy — Real fruit smoothies">
+  <meta property="og:description" content="Single-screen landing hero and flavour slider for Blendy real fruit smoothies featuring Berry, Kiwi, Banana, and Strawberry.">
+  <style>
+    @font-face {
+      font-family: 'Poppins';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('/fonts/poppins-500.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: 'Poppins';
+      font-style: normal;
+      font-weight: 600;
+      font-display: swap;
+      src: url('/fonts/poppins-600.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: 'Poppins';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('/fonts/poppins-700.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: 'Baloo 2';
+      font-style: normal;
+      font-weight: 800;
+      font-display: swap;
+      src: url('/fonts/baloo2-800.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    :root {
+      --u: 1px;
+      --fy: 0px;
+      --n: clamp(0.5px, min(100vw / 1440, 100vh / 900), 1.3px);
+    }
+
+    html.is-mobile {
+      --n: 1px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    body {
+      background: #C2B0DC;
+      color: #FFFFFF;
+      font-family: 'Poppins', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      touch-action: pan-y;
+    }
+
+    /* Stage & slides */
+    .stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      visibility: hidden;
+      z-index: 0;
+    }
+
+    .slide.is-active {
+      visibility: visible;
+      z-index: 2;
+    }
+
+    .frame {
+      position: absolute;
+      width: calc(1440 * var(--u));
+      height: calc(900 * var(--u));
+      left: calc(50% - 720 * var(--u));
+      top: calc(50% - 450 * var(--u) + var(--fy));
+    }
+
+    .layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .layer-word {
+      z-index: 1;
+    }
+
+    .layer-shadow {
+      z-index: 2;
+    }
+
+    .layer-bottle {
+      z-index: 3;
+    }
+
+    .layer-fruit {
+      z-index: 4;
+    }
+
+    .layer-corner {
+      z-index: 5;
+      filter: blur(calc(9 * var(--u)));
+    }
+
+    /* Flavour word */
+    .flavour-word {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Poppins', system-ui, sans-serif;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+      color: #FFFFFF;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Floor shadows */
+    .floor-shadow {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(closest-side, rgba(60, 40, 80, 0.22), transparent);
+      filter: blur(calc(4 * var(--u)));
+    }
+
+    /* Bottle & fruit sprites */
+    .bottle {
+      position: absolute;
+      background-repeat: no-repeat;
+    }
+
+    .piece {
+      position: absolute;
+    }
+
+    .piece-inner {
+      width: 100%;
+      height: 100%;
+      background-repeat: no-repeat;
+      animation: fruit-bob var(--dur, 4s) ease-in-out var(--delay, 0s) infinite alternate;
+      will-change: transform;
+    }
+
+    @keyframes fruit-bob {
+      from {
+        transform: translateY(calc(-7 * var(--u))) rotate(calc(var(--rot, 0deg) - 3deg));
+      }
+      to {
+        transform: translateY(calc(7 * var(--u))) rotate(calc(var(--rot, 0deg) + 3deg));
+      }
+    }
+
+    /* Fixed UI */
+    .ui {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ui a,
+    .ui button {
+      pointer-events: auto;
+      background: none;
+      border: none;
+      color: #FFFFFF;
+      font: inherit;
+      cursor: pointer;
+      text-decoration: none;
+      padding: 0;
+      margin: 0;
+      text-shadow: 0 1px 6px rgba(90, 70, 40, 0.18);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .ui a:focus-visible,
+    .ui button:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.85);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+
+    .header {
+      position: absolute;
+      left: calc(50 * var(--n));
+      right: calc(50 * var(--n));
+      top: calc(26 * var(--n));
+      height: calc(50 * var(--n));
+      display: flex;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: 'Baloo 2', system-ui, sans-serif;
+      font-weight: 800;
+      font-size: calc(51 * var(--n));
+      letter-spacing: -0.02em;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    .tabs {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: calc(88 * var(--n));
+    }
+
+    .tab {
+      font-family: 'Poppins', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: calc(21 * var(--n));
+      line-height: 1.2;
+      padding: calc(6 * var(--n)) 0;
+      white-space: nowrap;
+    }
+
+    .tab-underline {
+      position: absolute;
+      top: calc(100% + 2 * var(--n));
+      left: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: #FFFFFF;
+      box-shadow: 0 1px 6px rgba(90, 70, 40, 0.18);
+      pointer-events: none;
+      transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), width 0.6s cubic-bezier(0.65, 0, 0.35, 1);
+    }
+
+    .account {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: calc(22 * var(--n));
+      font-family: 'Poppins', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: calc(21 * var(--n));
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .account .sep {
+      opacity: 0.9;
+      text-shadow: 0 1px 6px rgba(90, 70, 40, 0.18);
+      pointer-events: none;
+    }
+
+    .shop-now {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(36 * var(--n));
+      font-family: 'Poppins', system-ui, sans-serif;
+      font-weight: 600;
+      font-size: calc(21 * var(--n));
+      letter-spacing: 0.2em;
+      line-height: 1.2;
+      padding: calc(10 * var(--n)) calc(16 * var(--n));
+      white-space: nowrap;
+    }
+
+    .arrow {
+      position: absolute;
+      bottom: calc(30 * var(--n));
+      width: calc(52 * var(--n));
+      height: calc(52 * var(--n));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arrow-prev {
+      left: calc(36 * var(--n));
+    }
+
+    .arrow-next {
+      right: calc(36 * var(--n));
+    }
+
+    .arrow svg {
+      width: calc(28 * var(--n));
+      height: calc(28 * var(--n));
+      display: block;
+      filter: drop-shadow(0 1px 6px rgba(90, 70, 40, 0.18));
+    }
+
+    /* Mobile overrides */
+    html.is-mobile .header {
+      left: 20px;
+      right: 20px;
+      top: 16px;
+      height: 40px;
+    }
+
+    html.is-mobile .logo {
+      font-size: 34px;
+    }
+
+    html.is-mobile .account {
+      font-size: 15px;
+      gap: 10px;
+    }
+
+    html.is-mobile .tabs {
+      top: 52px;
+      gap: 22px;
+    }
+
+    html.is-mobile .tab {
+      font-size: 15px;
+      padding: 6px 0;
+    }
+
+    html.is-mobile .tab-underline {
+      top: calc(100% + 2px);
+    }
+
+    html.is-mobile .shop-now {
+      font-size: 15px;
+      bottom: 22px;
+      padding: 10px 16px;
+    }
+
+    html.is-mobile .arrow {
+      width: 48px;
+      height: 48px;
+      bottom: 12px;
+    }
+
+    html.is-mobile .arrow-prev {
+      left: 8px;
+    }
+
+    html.is-mobile .arrow-next {
+      right: 8px;
+    }
+
+    html.is-mobile .arrow svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Opening reveal states */
+    .reveal-item {
+      opacity: 1;
+      translate: 0 0;
+    }
+
+    html.is-hidden .reveal-item {
+      opacity: 0;
+      translate: 0 14px;
+    }
+
+    html.is-revealing .reveal-item {
+      transition:
+        opacity 1000ms cubic-bezier(0.22, 0.8, 0.3, 1) var(--reveal-delay, 0ms),
+        translate 1000ms cubic-bezier(0.22, 0.8, 0.3, 1) var(--reveal-delay, 0ms);
+    }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .piece-inner {
+        animation: none !important;
+        transform: rotate(var(--rot, 0deg)) !important;
+      }
+
+      .tab-underline {
+        transition: none !important;
+      }
+
+      .reveal-item {
+        transition: none !important;
+        opacity: 1 !important;
+        translate: 0 0 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage" id="stage" aria-label="Blendy flavour showcase"></main>
+
+  <div class="ui" id="ui">
+    <header class="header">
+      <a href="#" class="logo reveal-item" style="--reveal-delay: 250ms;">Blendy</a>
+      <nav class="tabs reveal-item" id="tabs" aria-label="Smoothie flavours" style="--reveal-delay: 330ms;">
+        <button type="button" class="tab" data-index="0" aria-current="true">Berry</button>
+        <button type="button" class="tab" data-index="1">Kiwi</button>
+        <button type="button" class="tab" data-index="2">Banana</button>
+        <button type="button" class="tab" data-index="3">Strawberry</button>
+        <span class="tab-underline" id="tab-underline" aria-hidden="true"></span>
+      </nav>
+      <div class="account reveal-item" style="--reveal-delay: 410ms;">
+        <a href="#">Cart</a>
+        <span class="sep" aria-hidden="true">|</span>
+        <a href="#">Register</a>
+      </div>
+    </header>
+
+    <button type="button" class="arrow arrow-prev reveal-item" id="prev-btn" aria-label="Previous flavour" style="--reveal-delay: 490ms;">
+      <svg viewBox="0 0 28 28" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M24 14H4 M12 6l-8 8 8 8" />
+      </svg>
+    </button>
+
+    <a href="#" class="shop-now reveal-item" style="--reveal-delay: 570ms;">SHOP NOW</a>
+
+    <button type="button" class="arrow arrow-next reveal-item" id="next-btn" aria-label="Next flavour" style="--reveal-delay: 650ms;">
+      <svg viewBox="0 0 28 28" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 14h20 M16 6l8 8-8 8" />
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    (() => {
+      const PROXY_PREFIX = 'https://images.higgs.ai/?default=1&output=webp&w=2048&q=85&url=';
+      const sheetUrl = (raw) => PROXY_PREFIX + encodeURIComponent(raw);
+
+      const SHADOWS = [
+        [345, 650, 170, 24],
+        [720, 708, 320, 30],
+        [1318, 638, 160, 22],
+        [1045, 760, 150, 22],
+      ];
+
+      const FLAVOURS = [
+        {
+          id: 'berry',
+          word: 'Berry',
+          bg: '#C2B0DC',
+          sheet: sheetUrl('https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20261117_053958_8803e421-29b1-4c24-8efd-54cae3f479b4.png'),
+          items: [
+            [233, 60, 598, 917],
+            [1209, 272, 569, 573],
+            [265, 1230, 579, 572],
+            [1192, 1192, 626, 641],
+          ],
+          bottle: { x: 518, y: 138, w: 372 },
+          pieces: [
+            { item: 2, x: 383, y: 178, w: 104, rot: 0, mirror: false, layer: 'fruit' },
+            { item: 3, x: 960, y: 232, w: 118, rot: 0, mirror: false, layer: 'fruit' },
+            { item: 1, x: 295, y: 478, w: 129, rot: -8, mirror: false, layer: 'fruit' },
+            { item: 1, x: 1247, y: 455, w: 123, rot: 15, mirror: false, layer: 'fruit' },
+            { item: 2, x: 968, y: 590, w: 110, rot: 30, mirror: false, layer: 'fruit' },
+            { item: 1, x: -15, y: 590, w: 255, rot: 0, mirror: false, layer: 'corner' },
+            { item: 3, x: 1282, y: 40, w: 200, rot: 0, mirror: false, layer: 'corner' },
+          ],
+        },
+        {
+          id: 'kiwi',
+          word: 'Kiwi',
+          bg: '#B4D58A',
+          sheet: sheetUrl('https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20261117_053958_b5695e60-72da-4b5b-bfb7-a091d528af75.png'),
+          items: [
+            [217, 90, 610, 874],
+            [1204, 257, 619, 601],
+            [250, 1197, 619, 522],
+            [1200, 1186, 633, 650],
+          ],
+          bottle: { x: 504, y: 135, w: 403 },
+          pieces: [
+            { item: 2, x: 376, y: 170, w: 144, rot: -150, mirror: true, layer: 'fruit' },
+            { item: 3, x: 960, y: 228, w: 152, rot: 0, mirror: false, layer: 'fruit' },
+            { item: 1, x: 303, y: 460, w: 168, rot: 0, mirror: false, layer: 'fruit' },
+            { item: 2, x: 1187, y: 462, w: 148, rot: -25, mirror: false, layer: 'fruit' },
+            { item: 2, x: 946, y: 606, w: 150, rot: 10, mirror: true, layer: 'fruit' },
+            { item: 1, x: -10, y: 575, w: 260, rot: 0, mirror: false, layer: 'corner' },
+            { item: 3, x: 1285, y: 30, w: 200, rot: 0, mirror: false, layer: 'corner' },
+          ],
+        },
+        {
+          id: 'banana',
+          word: 'Banana',
+          bg: '#F3DA8A',
+          sheet: sheetUrl('https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20261117_053958_6cf14029-4bce-4c9a-b9fc-1c5b185082e3.png'),
+          items: [
+            [194, 76, 579, 873],
+            [1205, 228, 596, 597],
+            [230, 1181, 624, 648],
+            [1193, 1182, 646, 659],
+          ],
+          bottle: { x: 512, y: 135, w: 383 },
+          pieces: [
+            { item: 1, x: 387, y: 147, w: 123, rot: 0, mirror: false, layer: 'fruit' },
+            { item: 2, x: 970, y: 223, w: 136, rot: -10, mirror: true, layer: 'fruit' },
+            { item: 3, x: 298, y: 483, w: 132, rot: 15, mirror: false, layer: 'fruit' },
+            { item: 2, x: 1245, y: 462, w: 150, rot: 20, mirror: false, layer: 'fruit' },
+            { item: 3, x: 950, y: 582, w: 130, rot: -12, mirror: false, layer: 'fruit' },
+            { item: 3, x: 0, y: 585, w: 235, rot: 0, mirror: false, layer: 'corner' },
+            { item: 1, x: 1280, y: 30, w: 190, rot: 0, mirror: false, layer: 'corner' },
+          ],
+        },
+        {
+          id: 'strawberry',
+          word: 'Strawberry',
+          bg: '#F2AFC0',
+          sheet: sheetUrl('https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20261117_055135_cbfb5a8d-c52b-4358-a6ee-d941c6c42285.png'),
+          items: [
+            [226, 88, 594, 887],
+            [1190, 216, 561, 653],
+            [257, 1168, 604, 662],
+            [1240, 1169, 632, 686],
+          ],
+          bottle: { x: 512, y: 135, w: 386 },
+          pieces: [
+            { item: 1, x: 372, y: 142, w: 128, rot: 0, mirror: false, layer: 'fruit' },
+            { item: 2, x: 955, y: 225, w: 117, rot: 20, mirror: false, layer: 'fruit' },
+            { item: 3, x: 290, y: 455, w: 140, rot: -10, mirror: false, layer: 'fruit' },
+            { item: 3, x: 1250, y: 432, w: 135, rot: 15, mirror: false, layer: 'fruit' },
+            { item: 2, x: 962, y: 558, w: 146, rot: -15, mirror: false, layer: 'fruit' },
+            { item: 1, x: -10, y: 555, w: 245, rot: 0, mirror: false, layer: 'corner' },
+            { item: 1, x: 1285, y: 35, w: 200, rot: 20, mirror: false, layer: 'corner' },
+          ],
+        },
+      ];
+
+      // Measured coverage curve (t -> c)
+      const COVER_TABLE = [
+        [0, 0],
+        [0.031, 0.006],
+        [0.134, 0.012],
+        [0.206, 0.023],
+        [0.278, 0.047],
+        [0.34, 0.07],
+        [0.412, 0.105],
+        [0.485, 0.158],
+        [0.546, 0.246],
+        [0.583, 0.55],
+        [0.62, 0.825],
+        [0.69, 0.9],
+        [0.79, 0.94],
+        [0.85, 0.956],
+        [0.93, 0.975],
+        [1, 1],
+      ];
+
+      const LAYER_FACTORS = {
+        word: 0.40,
+        shadow: 0.30,
+        bottle: 0.15,
+        fruit: 0.55,
+        corner: 0.75,
+      };
+
+      const LAYER_NAMES = ['word', 'shadow', 'bottle', 'fruit', 'corner'];
+      const TRANSITION_MS = 970;
+      const AUTOPLAY_INTERVAL_MS = 2600;
+      const INTERACTION_PAUSE_MS = 6000;
+
+      const rootEl = document.documentElement;
+      const stageEl = document.getElementById('stage');
+      const tabsEl = document.getElementById('tabs');
+      const tabButtons = Array.from(tabsEl.querySelectorAll('.tab'));
+      const underlineEl = document.getElementById('tab-underline');
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+
+      const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const prefersReducedMotion = () => reducedMotionQuery.matches;
+
+      const measureCanvas = document.createElement('canvas');
+      const measureCtx = measureCanvas.getContext('2d');
+
+      let currentIndex = 0;
+      let isTransitioning = false;
+      let lastInteraction = 0;
+      let currentU = 1;
+      let isMobileLayout = false;
+      let openingAnimations = [];
+      let openingFinished = false;
+
+      // Apply crop styles in design-px multiplied by var(--u)
+      function applySpriteCrop(el, sheet, box, targetW) {
+        const [bx, by, bw, bh] = box;
+        const s = targetW / bw;
+        const h = bh * s;
+        const bgSize = 2048 * s;
+        const posX = -bx * s;
+        const posY = -by * s;
+
+        el.style.width = `calc(${targetW} * var(--u))`;
+        el.style.height = `calc(${h.toFixed(4)} * var(--u))`;
+        el.style.backgroundImage = `url("${sheet}")`;
+        el.style.backgroundSize = `calc(${bgSize.toFixed(4)} * var(--u)) calc(${bgSize.toFixed(4)} * var(--u))`;
+        el.style.backgroundPosition = `calc(${posX.toFixed(4)} * var(--u)) calc(${posY.toFixed(4)} * var(--u))`;
+      }
+
+      // Build DOM for all 4 slides
+      const slideRefs = FLAVOURS.map((flavour, idx) => {
+        const section = document.createElement('section');
+        section.className = 'slide' + (idx === 0 ? ' is-active' : '');
+        section.style.backgroundColor = flavour.bg;
+        section.setAttribute('aria-hidden', idx === 0 ? 'false' : 'true');
+
+        const frame = document.createElement('div');
+        frame.className = 'frame';
+
+        const layers = {};
+        for (const name of LAYER_NAMES) {
+          const layer = document.createElement('div');
+          layer.className = `layer layer-${name}`;
+          layers[name] = layer;
+          frame.appendChild(layer);
+        }
+
+        // 1. Word layer
+        const wordEl = document.createElement('div');
+        wordEl.className = 'flavour-word';
+        wordEl.textContent = flavour.word;
+        layers.word.appendChild(wordEl);
+
+        // 2. Shadow layer
+        for (const [cx, cy, w, h] of SHADOWS) {
+          const shadowEl = document.createElement('div');
+          shadowEl.className = 'floor-shadow';
+          shadowEl.style.left = `calc(${cx - w / 2} * var(--u))`;
+          shadowEl.style.top = `calc(${cy - h / 2} * var(--u))`;
+          shadowEl.style.width = `calc(${w} * var(--u))`;
+          shadowEl.style.height = `calc(${h} * var(--u))`;
+          layers.shadow.appendChild(shadowEl);
+        }
+
+        // 3. Bottle layer
+        const bottleEl = document.createElement('div');
+        bottleEl.className = 'bottle';
+        bottleEl.style.left = `calc(${flavour.bottle.x} * var(--u))`;
+        bottleEl.style.top = `calc(${flavour.bottle.y} * var(--u))`;
+        applySpriteCrop(bottleEl, flavour.sheet, flavour.items[0], flavour.bottle.w);
+        layers.bottle.appendChild(bottleEl);
+
+        // 4 & 5. Fruit & corner layers
+        for (const p of flavour.pieces) {
+          const box = flavour.items[p.item];
+          const s = p.w / box[2];
+          const h = box[3] * s;
+
+          const outer = document.createElement('div');
+          outer.className = 'piece';
+          outer.style.left = `calc(${p.x} * var(--u))`;
+          outer.style.top = `calc(${p.y} * var(--u))`;
+          outer.style.width = `calc(${p.w} * var(--u))`;
+          outer.style.height = `calc(${h.toFixed(4)} * var(--u))`;
+          if (p.mirror) {
+            outer.style.transform = 'scaleX(-1)';
+          }
+
+          const inner = document.createElement('div');
+          inner.className = 'piece-inner';
+          applySpriteCrop(inner, flavour.sheet, box, p.w);
+          inner.style.setProperty('--rot', `${p.rot}deg`);
+
+          const dur = (3.2 + Math.random() * 1.8).toFixed(3);
+          const delay = (-Math.random() * 4).toFixed(3);
+          inner.style.setProperty('--dur', `${dur}s`);
+          inner.style.setProperty('--delay', `${delay}s`);
+
+          outer.appendChild(inner);
+          layers[p.layer].appendChild(outer);
+        }
+
+        section.appendChild(frame);
+        stageEl.appendChild(section);
+
+        return {
+          flavour,
+          section,
+          frame,
+          layers,
+          wordEl,
+        };
+      });
+
+      function measureInkWidthAt100(word, letterSpacingEm) {
+        if (!measureCtx) return word.length * 60;
+        measureCtx.font = '700 100px Poppins, system-ui, sans-serif';
+        const lsPx = letterSpacingEm * 100;
+        if ('letterSpacing' in measureCtx) {
+          measureCtx.letterSpacing = `${lsPx}px`;
+        }
+        const m = measureCtx.measureText(word);
+        let width;
+        if (
+          typeof m.actualBoundingBoxLeft === 'number' &&
+          typeof m.actualBoundingBoxRight === 'number'
+        ) {
+          width = m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
+        } else {
+          width = m.width;
+        }
+        if (!('letterSpacing' in measureCtx) && word.length > 1) {
+          width += (word.length - 1) * lsPx;
+        }
+        return width;
+      }
+
+      function layoutWords(vw) {
+        const visibleMaxWidth = isMobileLayout
+          ? Math.min(1440, vw / currentU) * 0.92
+          : 1400;
+
+        for (const ref of slideRefs) {
+          const word = ref.flavour.word;
+          const defaultInk100 = measureInkWidthAt100(word, 0.005);
+          const defaultInkAt445 = defaultInk100 * 4.45;
+
+          const isLongWord = defaultInkAt445 > 1330;
+          const lsEm = isLongWord ? -0.035 : 0.005;
+          const ink100 = isLongWord ? measureInkWidthAt100(word, lsEm) : defaultInk100;
+
+          const maxFitSize = ink100 > 0 ? (visibleMaxWidth / ink100) * 100 : 445;
+          const F = Math.min(445, maxFitSize);
+
+          const baseline = 403.5 + 0.698 * (F / 2);
+          const top = baseline - 0.85 * F;
+
+          ref.wordEl.style.fontSize = `calc(${F.toFixed(3)} * var(--u))`;
+          ref.wordEl.style.letterSpacing = `${lsEm}em`;
+          ref.wordEl.style.top = `calc(${top.toFixed(3)} * var(--u))`;
+        }
+      }
+
+      function updateUnderline(index) {
+        const activeTab = tabButtons[index];
+        if (!activeTab) return;
+        underlineEl.style.width = `${activeTab.offsetWidth}px`;
+        underlineEl.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+        tabButtons.forEach((btn, i) => {
+          if (i === index) {
+            btn.setAttribute('aria-current', 'true');
+          } else {
+            btn.removeAttribute('aria-current');
+          }
+        });
+      }
+
+      function layout() {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        isMobileLayout = vw <= 820 || vh > vw;
+        rootEl.classList.toggle('is-mobile', isMobileLayout);
+
+        let u;
+        let fy;
+        if (isMobileLayout) {
+          u = Math.max(0.1, Math.min(vw / 640, (vh - 200) / 620));
+          fy = 8;
+        } else {
+          u = Math.min(vw / 1440, vh / 900);
+          fy = 0;
+        }
+
+        currentU = u;
+        rootEl.style.setProperty('--u', `${u}px`);
+        rootEl.style.setProperty('--fy', `${fy}px`);
+
+        layoutWords(vw);
+        updateUnderline(currentIndex);
+      }
+
+      function cover(t) {
+        if (t <= 0) return 0;
+        if (t >= 1) return 1;
+        for (let i = 0; i < COVER_TABLE.length - 1; i++) {
+          const [t0, c0] = COVER_TABLE[i];
+          const [t1, c1] = COVER_TABLE[i + 1];
+          if (t >= t0 && t <= t1) {
+            const k = (t - t0) / (t1 - t0);
+            const s = k * k * (3 - 2 * k);
+            return c0 + (c1 - c0) * s;
+          }
+        }
+        return 1;
+      }
+
+      function cancelOpeningAnimations() {
+        if (openingAnimations.length > 0) {
+          for (const anim of openingAnimations) {
+            anim.cancel();
+          }
+          openingAnimations = [];
+        }
+        for (const name of LAYER_NAMES) {
+          slideRefs[0].layers[name].style.transform = '';
+        }
+        if (!openingFinished) {
+          openingFinished = true;
+          rootEl.classList.remove('is-hidden', 'is-revealing');
+        }
+      }
+
+      function goToFlavour(nextIndex, dir) {
+        const targetIndex = ((nextIndex % FLAVOURS.length) + FLAVOURS.length) % FLAVOURS.length;
+        if (isTransitioning || targetIndex === currentIndex) return;
+
+        cancelOpeningAnimations();
+        updateUnderline(targetIndex);
+
+        const slideA = slideRefs[currentIndex];
+        const slideB = slideRefs[targetIndex];
+
+        if (prefersReducedMotion()) {
+          slideA.section.classList.remove('is-active');
+          slideA.section.setAttribute('aria-hidden', 'true');
+          slideA.section.style.zIndex = '';
+          slideA.section.style.visibility = '';
+          slideA.section.style.clipPath = '';
+
+          slideB.section.classList.add('is-active');
+          slideB.section.setAttribute('aria-hidden', 'false');
+          slideB.section.style.zIndex = '';
+          slideB.section.style.visibility = '';
+          slideB.section.style.clipPath = '';
+
+          currentIndex = targetIndex;
+          document.body.style.backgroundColor = FLAVOURS[targetIndex].bg;
+          return;
+        }
+
+        isTransitioning = true;
+        const frameWidth = 1440 * currentU;
+
+        // Place B underneath at z-index 1 and pre-offset its layers
+        slideB.section.style.zIndex = '1';
+        slideB.section.style.visibility = 'visible';
+        slideB.section.style.clipPath = 'none';
+        slideB.section.setAttribute('aria-hidden', 'false');
+
+        slideA.section.style.zIndex = '2';
+        slideA.section.style.visibility = 'visible';
+
+        for (const name of LAYER_NAMES) {
+          slideB.layers[name].style.transform = `translateX(${dir * LAYER_FACTORS[name] * frameWidth}px)`;
+          slideA.layers[name].style.transform = 'translateX(0px)';
+        }
+
+        const startTime = performance.now();
+
+        function tick(now) {
+          const elapsed = now - startTime;
+          const t = elapsed / TRANSITION_MS;
+
+          const tA = Math.min(1, t);
+          const c = cover(tA);
+
+          if (dir > 0) {
+            slideA.section.style.clipPath = `inset(0 ${(c * 100).toFixed(4)}% 0 0)`;
+          } else {
+            slideA.section.style.clipPath = `inset(0 0 0 ${(c * 100).toFixed(4)}%)`;
+          }
+
+          const xA = -dir * c * 0.14 * frameWidth;
+          for (const name of LAYER_NAMES) {
+            slideA.layers[name].style.transform = `translateX(${xA.toFixed(3)}px)`;
+          }
+
+          const p = Math.max(0, Math.min(1, (t - 0.5) / 0.42));
+          const kB = 1 - (1 - p) * (1 - p);
+
+          for (const name of LAYER_NAMES) {
+            const xB = dir * (1 - kB) * LAYER_FACTORS[name] * frameWidth;
+            slideB.layers[name].style.transform = `translateX(${xB.toFixed(3)}px)`;
+          }
+
+          if (t >= 1 && p >= 1) {
+            slideB.section.classList.add('is-active');
+            slideB.section.style.zIndex = '';
+            slideB.section.style.visibility = '';
+            slideB.section.style.clipPath = '';
+
+            slideA.section.classList.remove('is-active');
+            slideA.section.setAttribute('aria-hidden', 'true');
+            slideA.section.style.zIndex = '';
+            slideA.section.style.visibility = '';
+            slideA.section.style.clipPath = '';
+
+            for (const name of LAYER_NAMES) {
+              slideA.layers[name].style.transform = '';
+              slideB.layers[name].style.transform = '';
+            }
+
+            currentIndex = targetIndex;
+            document.body.style.backgroundColor = FLAVOURS[targetIndex].bg;
+            isTransitioning = false;
+            return;
+          }
+
+          requestAnimationFrame(tick);
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      function markInteraction() {
+        lastInteraction = Date.now();
+      }
+
+      // Controls: Tabs
+      tabButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          markInteraction();
+          const targetIndex = Number(btn.dataset.index);
+          if (targetIndex === currentIndex) return;
+          const dir = targetIndex > currentIndex ? 1 : -1;
+          goToFlavour(targetIndex, dir);
+        });
+      });
+
+      // Controls: Arrows
+      prevBtn.addEventListener('click', () => {
+        markInteraction();
+        goToFlavour(currentIndex - 1, -1);
+      });
+
+      nextBtn.addEventListener('click', () => {
+        markInteraction();
+        goToFlavour(currentIndex + 1, 1);
+      });
+
+      // Controls: Keyboard
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+          markInteraction();
+          goToFlavour(currentIndex - 1, -1);
+        } else if (e.key === 'ArrowRight') {
+          markInteraction();
+          goToFlavour(currentIndex + 1, 1);
+        }
+      });
+
+      // Controls: Swipe and drag
+      let pointerTracking = false;
+      let startX = 0;
+      let startY = 0;
+
+      stageEl.addEventListener('pointerdown', (e) => {
+        pointerTracking = true;
+        startX = e.clientX;
+        startY = e.clientY;
+      });
+
+      window.addEventListener('pointerup', (e) => {
+        if (!pointerTracking) return;
+        pointerTracking = false;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+          markInteraction();
+          if (dx < 0) {
+            goToFlavour(currentIndex + 1, 1);
+          } else {
+            goToFlavour(currentIndex - 1, -1);
+          }
+        }
+      });
+
+      window.addEventListener('pointercancel', () => {
+        pointerTracking = false;
+      });
+
+      // Keep links from scrolling/jumping
+      document.querySelectorAll('.ui a').forEach((link) => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          markInteraction();
+        });
+      });
+
+      // Resize handling
+      window.addEventListener('resize', layout);
+
+      // Opening sequence setup
+      if (!prefersReducedMotion()) {
+        rootEl.classList.add('is-hidden');
+      }
+
+      layout();
+
+      if (!prefersReducedMotion()) {
+        const frameWidth = 1440 * currentU;
+        for (const name of LAYER_NAMES) {
+          slideRefs[0].layers[name].style.transform = `translateX(${LAYER_FACTORS[name] * frameWidth}px)`;
+        }
+      }
+
+      function startOpeningSequence() {
+        if (openingFinished) return;
+        layout();
+
+        if (prefersReducedMotion()) {
+          cancelOpeningAnimations();
+          return;
+        }
+
+        const frameWidth = 1440 * currentU;
+        const easing = 'cubic-bezier(0.22, 0.8, 0.3, 1)';
+
+        for (const name of LAYER_NAMES) {
+          const layerEl = slideRefs[0].layers[name];
+          const startXOffset = LAYER_FACTORS[name] * frameWidth;
+          layerEl.style.transform = '';
+          const anim = layerEl.animate(
+            [
+              { transform: `translateX(${startXOffset.toFixed(3)}px)` },
+              { transform: 'translateX(0px)' },
+            ],
+            {
+              duration: 900,
+              easing,
+              fill: 'none',
+            }
+          );
+          openingAnimations.push(anim);
+        }
+
+        rootEl.classList.add('is-revealing');
+        void rootEl.offsetWidth;
+        rootEl.classList.remove('is-hidden');
+
+        window.setTimeout(() => {
+          openingFinished = true;
+          rootEl.classList.remove('is-hidden', 'is-revealing');
+          openingAnimations = [];
+        }, 1700);
+      }
+
+      // Failsafe at 3s
+      window.setTimeout(() => {
+        if (!openingFinished) {
+          cancelOpeningAnimations();
+          layout();
+        }
+      }, 3000);
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          startOpeningSequence();
+        });
+      } else {
+        startOpeningSequence();
+      }
+
+      // Autoplay every 2600ms if visible and idle >= 6s
+      window.setInterval(() => {
+        if (
+          document.visibilityState === 'visible' &&
+          Date.now() - lastInteraction >= INTERACTION_PAUSE_MS &&
+          !isTransitioning
+        ) {
+          goToFlavour(currentIndex + 1, 1);
+        }
+      }, AUTOPLAY_INTERVAL_MS);
+    })();
+  </script>
+</body>
+</html>
