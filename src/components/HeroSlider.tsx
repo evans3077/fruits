@@ -21,19 +21,20 @@ const COVER_TABLE: [number, number][] = [
   [1, 1],
 ];
 
-const LAYER_FACTORS: Record<'word' | 'shadow' | 'bottle' | 'fruit' | 'corner', number> = {
-  word: 0.4,
-  shadow: 0.3,
-  bottle: 0.15,
-  fruit: 0.55,
-  corner: 0.75,
+const LAYER_FACTORS: Record<'word' | 'shadow' | 'behind' | 'bottle' | 'fruit' | 'corner', number> = {
+  word: 0.26,
+  shadow: 0.22,
+  behind: 0.3,
+  bottle: 0.42,
+  fruit: 0.5,
+  corner: 0.72,
 };
 
-const LAYER_NAMES = ['word', 'shadow', 'bottle', 'fruit', 'corner'] as const;
+const LAYER_NAMES = ['word', 'shadow', 'behind', 'bottle', 'fruit', 'corner'] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
 
-const TRANSITION_MS = 970;
-const AUTOPLAY_INTERVAL_MS = 2600;
+const TRANSITION_MS = 1160;
+const AUTOPLAY_INTERVAL_MS = 3000;
 const INTERACTION_PAUSE_MS = 6000;
 
 interface HeroSliderProps {
@@ -138,12 +139,31 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         layers.shadow.appendChild(shadowEl);
       }
 
-      const bottleEl = document.createElement('div');
-      bottleEl.className = 'blendy-bottle';
-      bottleEl.style.left = `calc(${flavour.bottle.x} * var(--u))`;
-      bottleEl.style.top = `calc(${flavour.bottle.y} * var(--u))`;
-      applySpriteCrop(bottleEl, flavour.sheet, flavour.items[0], flavour.bottle.w);
-      layers.bottle.appendChild(bottleEl);
+      const pourWrap = document.createElement('div');
+      pourWrap.className = 'blendy-pour-scene';
+      pourWrap.style.left = `calc(${flavour.pourScene.x} * var(--u))`;
+      pourWrap.style.top = `calc(${flavour.pourScene.y} * var(--u))`;
+      pourWrap.style.width = `calc(${flavour.pourScene.w} * var(--u))`;
+      pourWrap.style.height = `calc(${flavour.pourScene.h} * var(--u))`;
+
+      const pourImg = document.createElement('img');
+      pourImg.src = flavour.pourImage;
+      pourImg.alt = `${flavour.word} smoothie bottle pouring into a glass`;
+      pourImg.className = 'blendy-pour-img';
+      pourImg.decoding = 'async';
+      pourImg.setAttribute('referrerpolicy', 'no-referrer');
+      pourImg.onerror = () => {
+        pourWrap.remove();
+        const fallbackBottle = document.createElement('div');
+        fallbackBottle.className = 'blendy-bottle';
+        fallbackBottle.style.left = `calc(${flavour.bottle.x} * var(--u))`;
+        fallbackBottle.style.top = `calc(${flavour.bottle.y} * var(--u))`;
+        applySpriteCrop(fallbackBottle, flavour.sheet, flavour.items[0], flavour.bottle.w);
+        layers.bottle.appendChild(fallbackBottle);
+      };
+
+      pourWrap.appendChild(pourImg);
+      layers.bottle.appendChild(pourWrap);
 
       for (const p of flavour.pieces) {
         const box = flavour.items[p.item];
@@ -279,6 +299,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
       }
       for (const name of LAYER_NAMES) {
         slideRefs[0].layers[name].style.transform = '';
+        slideRefs[0].layers[name].style.opacity = '';
       }
       if (!openingFinished) {
         openingFinished = true;
@@ -327,7 +348,9 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
 
       for (const name of LAYER_NAMES) {
         slideB.layers[name].style.transform = `translateX(${dir * LAYER_FACTORS[name] * frameWidth}px)`;
+        slideB.layers[name].style.opacity = name === 'bottle' ? '0' : '1';
         slideA.layers[name].style.transform = 'translateX(0px)';
+        slideA.layers[name].style.opacity = '1';
       }
 
       const startTime = performance.now();
@@ -346,18 +369,34 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
 
         const xA = -dir * c * 0.14 * frameWidth;
         for (const name of LAYER_NAMES) {
-          slideA.layers[name].style.transform = `translateX(${xA.toFixed(3)}px)`;
+          if (name === 'bottle') {
+            const tiltOut = (-dir * c * 4.5).toFixed(3);
+            slideA.layers[name].style.transform = `translateX(${xA.toFixed(3)}px) rotate(${tiltOut}deg)`;
+          } else {
+            slideA.layers[name].style.transform = `translateX(${xA.toFixed(3)}px)`;
+          }
         }
 
-        const p = Math.max(0, Math.min(1, (t - 0.5) / 0.42));
-        const kB = 1 - (1 - p) * (1 - p);
+        // Background flavour word + behind-bottle fruit arrive EARLY (t = 0.14..0.58)
+        // so the user clearly sees the fruit & flavour name behind the bottle before it settles
+        const pReveal = Math.max(0, Math.min(1, (t - 0.14) / 0.44));
+        const kReveal = 1 - Math.pow(1 - pReveal, 3);
 
         for (const name of LAYER_NAMES) {
-          const xB = dir * (1 - kB) * LAYER_FACTORS[name] * frameWidth;
+          if (name === 'bottle') continue;
+          const xB = dir * (1 - kReveal) * LAYER_FACTORS[name] * frameWidth;
           slideB.layers[name].style.transform = `translateX(${xB.toFixed(3)}px)`;
         }
 
-        if (t >= 1 && p >= 1) {
+        // Incoming pouring bottle + glass holds briefly then tilts & glides in (t = 0.42..0.96)
+        const pBottle = Math.max(0, Math.min(1, (t - 0.42) / 0.54));
+        const kBottle = 1 - Math.pow(1 - pBottle, 3);
+        const xBottleB = dir * (1 - kBottle) * LAYER_FACTORS.bottle * frameWidth;
+        const tiltIn = dir * (1 - kBottle) * 4.8;
+        slideB.layers.bottle.style.transform = `translateX(${xBottleB.toFixed(3)}px) rotate(${tiltIn.toFixed(3)}deg)`;
+        slideB.layers.bottle.style.opacity = Math.min(1, pBottle * 1.9).toFixed(3);
+
+        if (t >= 1 && pReveal >= 1 && pBottle >= 1) {
           slideB.section.classList.add('is-active');
           slideB.section.style.zIndex = '';
           slideB.section.style.visibility = '';
@@ -371,7 +410,9 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
 
           for (const name of LAYER_NAMES) {
             slideA.layers[name].style.transform = '';
+            slideA.layers[name].style.opacity = '';
             slideB.layers[name].style.transform = '';
+            slideB.layers[name].style.opacity = '';
           }
 
           currentIndex = targetIndex;
@@ -484,12 +525,23 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         const layerEl = slideRefs[0].layers[name];
         const startXOffset = LAYER_FACTORS[name] * frameWidth;
         layerEl.style.transform = '';
+        const isBottle = name === 'bottle';
         const anim = layerEl.animate(
-          [
-            { transform: `translateX(${startXOffset.toFixed(3)}px)` },
-            { transform: 'translateX(0px)' },
-          ],
-          { duration: 900, easing, fill: 'none' }
+          isBottle
+            ? [
+                { transform: `translateX(${startXOffset.toFixed(3)}px) rotate(4deg)`, opacity: 0 },
+                { transform: 'translateX(0px) rotate(0deg)', opacity: 1 },
+              ]
+            : [
+                { transform: `translateX(${startXOffset.toFixed(3)}px)` },
+                { transform: 'translateX(0px)' },
+              ],
+          {
+            duration: 900,
+            delay: isBottle ? 260 : 0,
+            easing,
+            fill: isBottle ? 'backwards' : 'none',
+          }
         );
         openingAnimations.push(anim);
       }

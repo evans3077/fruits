@@ -116,6 +116,7 @@ body {
 
 .blendy-layer-word { z-index: 1; }
 .blendy-layer-shadow { z-index: 2; }
+.blendy-layer-behind { z-index: 2; }
 .blendy-layer-bottle { z-index: 3; }
 .blendy-layer-fruit { z-index: 4; }
 .blendy-layer-corner {
@@ -144,6 +145,45 @@ body {
 .blendy-bottle {
   position: absolute;
   background-repeat: no-repeat;
+}
+
+.blendy-pour-scene {
+  position: absolute;
+  overflow: hidden;
+  border-radius: calc(36 * var(--u));
+  -webkit-mask-image: radial-gradient(
+    ellipse 74% 78% at 50% 52%,
+    #000000 54%,
+    rgba(0, 0, 0, 0.85) 70%,
+    rgba(0, 0, 0, 0) 97%
+  );
+  mask-image: radial-gradient(
+    ellipse 74% 78% at 50% 52%,
+    #000000 54%,
+    rgba(0, 0, 0, 0.85) 70%,
+    rgba(0, 0, 0, 0) 97%
+  );
+  transform-origin: 48% 36%;
+  animation: blendy-pour-sway 5.4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.blendy-pour-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+@keyframes blendy-pour-sway {
+  from {
+    transform: rotate(-1.4deg) translateY(calc(-3 * var(--u)));
+  }
+  to {
+    transform: rotate(1.4deg) translateY(calc(3 * var(--u)));
+  }
 }
 
 .blendy-piece {
@@ -336,6 +376,10 @@ html.is-revealing .blendy-reveal-item {
   .blendy-piece-inner {
     animation: none !important;
     transform: rotate(var(--rot, 0deg)) !important;
+  }
+  .blendy-pour-scene {
+    animation: none !important;
+    transform: none !important;
   }
   .blendy-tab-underline { transition: none !important; }
   .blendy-reveal-item {

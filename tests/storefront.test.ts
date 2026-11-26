@@ -18,6 +18,7 @@ import {
   formatKsh,
   normalizeKenyanPhone,
 } from '../src/lib/kenya.ts';
+import { buildOrderStepperModel, hasActiveOrders } from '../src/lib/orderStepper.ts';
 import { verifyIntaSendChallenge } from '../src/services/payments.ts';
 import {
   adjustVariantStock,
@@ -67,6 +68,74 @@ describe('Kenyan Storefront Core Utilities', () => {
     expect(verifyIntaSendChallenge('wrong_challenge')).toBe(false);
     expect(verifyIntaSendChallenge(undefined)).toBe(false);
     process.env.INTASEND_WEBHOOK_CHALLENGE = prev;
+  });
+
+  it('maps order statuses to the 4-stage visual stepper and polling state cleanly', () => {
+    const baseOrder = {
+      id: 1,
+      orderRef: 'BL-2026-0001',
+      customerName: 'Amina',
+      customerPhone: '+254712345678',
+      payerPhone: '+254712345678',
+      customerEmail: 'amina@example.com',
+      fulfilmentType: 'delivery' as const,
+      county: 'Nairobi',
+      town: 'Nairobi',
+      estate: 'Kilimani',
+      building: 'Argwings',
+      landmark: 'Yaya',
+      deliveryInstructions: '',
+      paymentMethod: 'mpesa_sandbox_sim',
+      paymentStatus: 'paid',
+      fulfilmentStatus: 'preparing',
+      subtotalCents: 90000,
+      discountCents: 0,
+      deliveryFeeCents: 20000,
+      taxCents: 0,
+      totalCents: 110000,
+      promoCode: null,
+      createdAt: '2026-11-25T10:00:00.000Z',
+      updatedAt: '2026-11-25T10:15:00.000Z',
+      items: [],
+      events: [
+        {
+          id: 10,
+          eventType: 'status',
+          fromStatus: 'received',
+          toStatus: 'preparing',
+          note: 'Cold blending started',
+          createdAt: '2026-11-25T10:10:00.000Z',
+        },
+      ],
+      transactions: [],
+    };
+
+    const packingModel = buildOrderStepperModel(baseOrder);
+    expect(packingModel.isHalted).toBe(false);
+    expect(packingModel.stages.map((s) => `${s.label}:${s.state}`)).toEqual([
+      'Pending:completed',
+      'Packing:current',
+      'In Transit:upcoming',
+      'Delivered:upcoming',
+    ]);
+    expect(packingModel.stages[1].timestamp).toBe('2026-11-25T10:10:00.000Z');
+    expect(hasActiveOrders([baseOrder])).toBe(true);
+
+    const deliveredModel = buildOrderStepperModel({
+      ...baseOrder,
+      fulfilmentStatus: 'delivered',
+    });
+    expect(deliveredModel.stages.every((s) => s.state === 'completed')).toBe(true);
+    expect(hasActiveOrders([{ ...baseOrder, fulfilmentStatus: 'delivered' }])).toBe(false);
+
+    const cancelledModel = buildOrderStepperModel({
+      ...baseOrder,
+      fulfilmentStatus: 'cancelled',
+      paymentStatus: 'cancelled',
+    });
+    expect(cancelledModel.isHalted).toBe(true);
+    expect(cancelledModel.stages[1].state).toBe('halted');
+    expect(hasActiveOrders([{ ...baseOrder, fulfilmentStatus: 'cancelled' }])).toBe(false);
   });
 });
 
